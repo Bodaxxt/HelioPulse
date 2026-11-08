@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import {
   MapPin,
   SunMedium,
@@ -17,6 +18,16 @@ import {
 } from "lucide-react";
 import { SiteInput, EGYPTIAN_INDUSTRIAL_HUBS, EgyptianHubPreset } from "../lib/types";
 import { formatNum } from "../lib/format";
+
+const MapLocationPicker = dynamic(() => import("./MapLocationPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 sm:h-72 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs animate-pulse">
+      <MapPin className="w-5 h-5 text-solar-400/50" />
+      <span>Loading Interactive Solar Map of Egypt...</span>
+    </div>
+  ),
+});
 
 interface SiteConfigFormProps {
   onSubmit: (data: SiteInput) => void;
@@ -57,6 +68,13 @@ export default function SiteConfigForm({ onSubmit, isLoading }: SiteConfigFormPr
     setLatitude(hub.latitude);
     setLongitude(hub.longitude);
     setCapacityKwp(hub.typicalCapacityKwp);
+  };
+
+  const handleMapLocationChange = (lat: number, lon: number) => {
+    setLatitude(lat);
+    setLongitude(lon);
+    // If customized away from preset, denote it
+    setSelectedHub("Custom Pin");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -141,6 +159,16 @@ export default function SiteConfigForm({ onSubmit, isLoading }: SiteConfigFormPr
                 );
               })}
             </div>
+          </div>
+
+          {/* 1.5 Interactive Map Picker */}
+          <div className="pt-2">
+            <MapLocationPicker
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={handleMapLocationChange}
+              siteName={siteName}
+            />
           </div>
 
           {/* 2. Coordinates & Facility Name */}
