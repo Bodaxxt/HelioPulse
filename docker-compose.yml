@@ -1,0 +1,64 @@
+# ============================================================
+# HelioPulse — Docker Compose (Full Stack)
+# Services: backend (FastAPI) + frontend (Next.js)
+# Usage: docker compose up --build
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ── FastAPI Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: heliopulse-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist weather snapshots across container restarts
+      - snapshots:/app/snapshots
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=info
+      - CORS_ORIGINS=http://localhost:3000
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import httpx; httpx.get('http://localhost:8000/api/v1/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - heliopulse-net
+
+  # ── Next.js Frontend ─────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Points Next.js SSR requests at the internal service name
+        NEXT_PUBLIC_API_URL: http://backend:8000
+    container_name: heliopulse-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    networks:
+      - heliopulse-net
+
+volumes:
+  snapshots:
+    driver: local
+
+networks:
+  heliopulse-net:
+    driver: bridge
+
