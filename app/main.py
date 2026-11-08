@@ -5,7 +5,7 @@ Production-grade solar physics and cleaning optimization API for Egyptian C&I ro
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health_router, optimization_router
+from app.routers import health_router, optimization_router, dispatch_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -31,6 +31,7 @@ app.add_middleware(
 # Register API Routers under /api/v1
 app.include_router(health_router, prefix=settings.API_PREFIX)
 app.include_router(optimization_router, prefix=settings.API_PREFIX)
+app.include_router(dispatch_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/", tags=["Root"])

@@ -31,10 +31,8 @@ htmlcov/
 coverage.xml
 *.coveragerc
 
-## --- Snapshots (weather cache — keep or ignore depending on team policy) ---
-# Uncomment to exclude weather snapshots from git (recommended for large repos):
-# snapshots/
-# Keep test-run cache always excluded:
+## --- Snapshots (weather cache) ---
+snapshots/*.json
 snapshots/test_run_cache/
 
 ## --- Next.js ---

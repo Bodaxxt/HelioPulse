@@ -1,5 +1,10 @@
 import axios, { AxiosError } from "axios";
-import { SiteInput, OptimizationResponse } from "./types";
+import {
+  SiteInput,
+  OptimizationResponse,
+  WhatsAppDispatchRequest,
+  WhatsAppDispatchResponse,
+} from "./types";
 
 /**
  * Resolve the backend base API URL cleanly.
@@ -119,5 +124,16 @@ export async function checkBackendHealth(): Promise<{ status: string; version: s
  */
 export async function optimizeCleaningSchedule(site: SiteInput): Promise<OptimizationResponse> {
   const res = await apiClient.post<OptimizationResponse>("/optimize-cleaning", site);
+  return res.data;
+}
+
+/**
+ * POST /api/v1/dispatch/whatsapp
+ * Sends automated WhatsApp directive to field engineers.
+ */
+export async function dispatchWhatsAppDirective(
+  payload: WhatsAppDispatchRequest
+): Promise<WhatsAppDispatchResponse> {
+  const res = await apiClient.post<WhatsAppDispatchResponse>("/dispatch/whatsapp", payload);
   return res.data;
 }

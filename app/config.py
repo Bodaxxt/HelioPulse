@@ -2,6 +2,7 @@
 Handles environment variables, API endpoints, snapshot paths, and default physical constants.
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,6 +16,12 @@ class Settings:
     APP_NAME: str = "HelioPulse Solar Decision Engine"
     MODEL_VERSION: str = "1.0.0-uncalibrated"
     API_PREFIX: str = "/api/v1"
+
+    # Automated Operations & WhatsApp Dispatch Settings
+    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
+    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
+    TWILIO_WHATSAPP_FROM: str = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
+    DEFAULT_DISPATCH_PHONE: str = os.getenv("DEFAULT_DISPATCH_PHONE", "+201012345678")
 
     # Open-Meteo Endpoints
     OPEN_METEO_FORECAST_URL: str = "https://api.open-meteo.com/v1/forecast"

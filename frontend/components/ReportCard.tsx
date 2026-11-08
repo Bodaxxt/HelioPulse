@@ -1,9 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, MessageSquare, Mail, FileDown, Share2, Table, Printer, Sparkles } from "lucide-react";
-import { OptimizationResponse, ScenarioResult } from "../lib/types";
+import {
+  Copy,
+  Check,
+  MessageSquare,
+  Mail,
+  FileDown,
+  Share2,
+  Table,
+  Send,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  Smartphone,
+  Sparkles,
+} from "lucide-react";
+import { OptimizationResponse, ScenarioResult, WhatsAppDispatchResponse } from "../lib/types";
 import { formatNum } from "../lib/format";
+import { dispatchWhatsAppDirective } from "../lib/api";
 
 interface ReportCardProps {
   response: OptimizationResponse;
@@ -12,8 +27,14 @@ interface ReportCardProps {
 
 export default function ReportCard({ response, activeScenario }: ReportCardProps) {
   const [copied, setCopied] = useState(false);
-  const [lang, setLang] = useState<"en" | "ar">("en");
+  const [lang, setLang] = useState<"en" | "ar">("ar");
   const [isExporting, setIsExporting] = useState(false);
+
+  // Automated WhatsApp Dispatch state
+  const [recipientPhone, setRecipientPhone] = useState("01012345678");
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<WhatsAppDispatchResponse | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
 
   const { site_summary } = response;
 
@@ -55,6 +76,31 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
     navigator.clipboard.writeText(currentMessage);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleAutomatedDispatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recipientPhone.trim() || isDispatching) return;
+
+    setIsDispatching(true);
+    setDispatchError(null);
+    setDispatchResult(null);
+
+    try {
+      const result = await dispatchWhatsAppDirective({
+        recipient_phone: recipientPhone.trim(),
+        message: currentMessage,
+        site_id: site_summary.site_id,
+        site_name: site_summary.site_name,
+      });
+      setDispatchResult(result);
+    } catch (err: any) {
+      setDispatchError(
+        err.response?.data?.detail || err.message || "Failed to dispatch automated WhatsApp message."
+      );
+    } finally {
+      setIsDispatching(false);
+    }
   };
 
   const handleSimulatePDF = () => {
@@ -112,29 +158,21 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
 
   return (
     <div className="glass-panel rounded-2xl p-5 border border-slate-800">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
         <div>
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Share2 className="w-4 h-4 text-solar-400" />
-            <span>Executive Action & Dispatch Center</span>
+            <span>Executive Action &amp; Dispatch Center</span>
           </h3>
           <p className="text-xs text-slate-400">
-            Plain-language recommendation ready to dispatch via WhatsApp or Email to factory O&amp;M managers.
+            Plain-language recommendation ready to dispatch via Automated WhatsApp to factory O&amp;M managers.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Language Switcher */}
           <div className="flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
-            <button
-              type="button"
-              onClick={() => setLang("en")}
-              className={`px-2.5 py-1 rounded-md font-medium transition ${
-                lang === "en" ? "bg-amber-500/20 text-amber-300 font-bold" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              English
-            </button>
             <button
               type="button"
               onClick={() => setLang("ar")}
@@ -144,13 +182,22 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
             >
               عربي
             </button>
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`px-2.5 py-1 rounded-md font-medium transition ${
+                lang === "en" ? "bg-amber-500/20 text-amber-300 font-bold" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              English
+            </button>
           </div>
 
           <button
             type="button"
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition"
-            title="Download full 90-day hourly telemetry & degradation tabular data in CSV/Excel format"
+            title="Download full 90-day hourly telemetry tabular data in CSV format"
           >
             <Table className="w-3.5 h-3.5 text-emerald-400" />
             <span>Export CSV</span>
@@ -186,7 +233,7 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-md ${
               copied
                 ? "bg-emerald-500 text-industrial-950 font-bold"
-                : "bg-amber-400 hover:bg-amber-300 text-industrial-950"
+                : "bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700"
             }`}
           >
             {copied ? (
@@ -197,18 +244,84 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy for WhatsApp</span>
+                <span>Copy Text</span>
               </>
             )}
           </button>
         </div>
       </div>
 
+      {/* 🚀 Automated WhatsApp Dispatch Control Bar */}
+      <div className="mt-4 p-4 rounded-xl bg-slate-900/80 border border-amber-500/20">
+        <form onSubmit={handleAutomatedDispatch} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 shrink-0">
+              <span className="text-base leading-none">🇪🇬</span>
+              <Smartphone className="w-3.5 h-3.5 text-solar-400" />
+            </div>
+            <input
+              type="text"
+              value={recipientPhone}
+              onChange={(e) => setRecipientPhone(e.target.value)}
+              placeholder="e.g. 01012345678 or +2010..."
+              className="w-full px-3.5 py-2 rounded-lg glass-input text-xs font-mono text-white placeholder-slate-500"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isDispatching}
+            className="px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-industrial-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20 shrink-0 disabled:opacity-50"
+          >
+            {isDispatching ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Dispatching...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                <span>Dispatch Automated WhatsApp (إرسال تلقائي)</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Live Delivery Confirmation Card */}
+        {dispatchResult && (
+          <div className="mt-3 p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div>
+                <span className="font-bold">
+                  {dispatchResult.status === "delivered" ? "Live WhatsApp Message Transmitted!" : "Simulated WhatsApp Dispatched!"}
+                </span>
+                <span className="text-slate-400 block sm:inline sm:ml-2">
+                  To {dispatchResult.recipient_phone} • SID: <code className="font-mono text-emerald-300">{dispatchResult.message_id}</code>
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
+              {new Date(dispatchResult.sent_at).toLocaleTimeString()}
+            </span>
+          </div>
+        )}
+
+        {/* Error Notice */}
+        {dispatchError && (
+          <div className="mt-3 p-3 rounded-lg bg-rose-950/40 border border-rose-500/40 text-xs text-rose-300 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{dispatchError}</span>
+          </div>
+        )}
+      </div>
+
       {/* Footer Dispatch Tips */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400 pt-3 border-t border-slate-800/80">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1 text-emerald-400 font-medium">
-            <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Dispatch Ready
+            <MessageSquare className="w-3.5 h-3.5" /> Automated Twilio &amp; Mock Engine
           </span>
           <span className="flex items-center gap-1 text-slate-300">
             <Mail className="w-3.5 h-3.5" /> O&amp;M Fleet Approved
@@ -216,10 +329,9 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
         </div>
 
         <div className="text-[11px] font-mono text-slate-500">
-          HelioPulse ID: {site_summary.site_id || "EGY-C&I"} • Generated via Open-Meteo Cache
+          HelioPulse ID: {site_summary.site_id || "EGY-C&I"} • Production REST Dispatcher
         </div>
       </div>
     </div>
   );
 }
-

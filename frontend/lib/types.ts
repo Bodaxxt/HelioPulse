@@ -88,6 +88,24 @@ export interface EgyptianHubPreset {
   description: string;
 }
 
+export interface WhatsAppDispatchRequest {
+  recipient_phone: string;
+  message: string;
+  site_id?: string;
+  site_name?: string;
+}
+
+export interface WhatsAppDispatchResponse {
+  success: boolean;
+  status: "delivered" | "simulated" | "failed";
+  provider: string;
+  message_id: string;
+  recipient_phone: string;
+  sent_at: string;
+  delivered_text: string;
+  notice?: string;
+}
+
 export const EGYPTIAN_INDUSTRIAL_HUBS: EgyptianHubPreset[] = [
   {
     name: "10th of Ramadan",
