@@ -31,7 +31,7 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
   const [isExporting, setIsExporting] = useState(false);
 
   // Automated WhatsApp Dispatch state
-  const [recipientPhone, setRecipientPhone] = useState("01012345678");
+  const [recipientPhone, setRecipientPhone] = useState("01098539907");
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchResult, setDispatchResult] = useState<WhatsAppDispatchResponse | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
@@ -80,24 +80,35 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
 
   const handleAutomatedDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipientPhone.trim() || isDispatching) return;
+    const phone = recipientPhone.trim();
+    if (!phone) return;
 
+    // 1. Format clean Egyptian/International number for direct WhatsApp link
+    let cleanPhone = phone.replace(/[\s\-\(\)\+]/g, "");
+    if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+      cleanPhone = "2" + cleanPhone;
+    } else if (cleanPhone.startsWith("1") && cleanPhone.length === 10) {
+      cleanPhone = "20" + cleanPhone;
+    }
+
+    // 2. Open WhatsApp Web or Mobile App directly on this contact with the full pre-filled directive!
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(currentMessage)}`;
+    window.open(waUrl, "_blank");
+
+    // 3. Log to backend dispatch endpoint for analytics
     setIsDispatching(true);
     setDispatchError(null);
-    setDispatchResult(null);
 
     try {
       const result = await dispatchWhatsAppDirective({
-        recipient_phone: recipientPhone.trim(),
+        recipient_phone: phone,
         message: currentMessage,
         site_id: site_summary.site_id,
         site_name: site_summary.site_name,
       });
       setDispatchResult(result);
     } catch (err: any) {
-      setDispatchError(
-        err.response?.data?.detail || err.message || "Failed to dispatch automated WhatsApp message."
-      );
+      console.warn("Backend dispatch log note:", err);
     } finally {
       setIsDispatching(false);
     }
@@ -272,17 +283,18 @@ export default function ReportCard({ response, activeScenario }: ReportCardProps
           <button
             type="submit"
             disabled={isDispatching}
-            className="px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-industrial-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20 shrink-0 disabled:opacity-50"
+            className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-industrial-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20 shrink-0 disabled:opacity-50"
+            title="Open WhatsApp chat immediately with pre-filled directive"
           >
             {isDispatching ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Dispatching...</span>
+                <span>Opening WhatsApp...</span>
               </>
             ) : (
               <>
-                <Send className="w-3.5 h-3.5" />
-                <span>Dispatch Automated WhatsApp (إرسال تلقائي)</span>
+                <MessageSquare className="w-4 h-4 fill-industrial-950" />
+                <span>إرسال عبر واتساب الآن (Open WhatsApp)</span>
               </>
             )}
           </button>
